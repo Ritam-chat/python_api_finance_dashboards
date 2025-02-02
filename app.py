@@ -111,14 +111,11 @@ class AddRecord(Resource):
             200:
                 description: A successful POST request
             400: 
-                description: Bad request, missing 'Book' or 'Rating' in the request body
+                description: Bad request, Some error occurred
         """
 
         data = request.json
-        print(data)
-
         key, json = get_msg_to_json(data)
-        print(json)
         # Check if 'Book' and 'Rating' are present in the request body
         if len(json) == 0:
             success = fb_manager.add_to_stash(key,data)
