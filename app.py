@@ -117,12 +117,12 @@ class AddRecord(Resource):
         data = request.json
         key, json = get_msg_to_json(data)
         # Check if 'Book' and 'Rating' are present in the request body
+        print("Starting FB")
         if len(json) == 0:
             success = fb_manager.add_to_stash(key,data)
         # Call the add_record function to add the record to the DB table
         else:
             success = fb_manager.add_record(key,data['readable_date'], json)
-
         if success:
             return {"message": "Record added successfully"}, 200
         else:
