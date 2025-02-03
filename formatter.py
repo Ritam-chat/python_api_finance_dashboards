@@ -505,16 +505,12 @@ paymentInfo = {
 }
 
 
-
-if True in [False, False]:
-    print('Hello')
 z = 0
 
 root = []
 
 def get_msg_to_json(x):
-    print(x)
-# for x in root:
+
     if True in [K in x.get('address').upper() for K in paymentInfo.keys()]:
         dt_str = x.get('readable_date').replace('Sept','Sep')
         datetime_object = datetime.strptime(dt_str,"%d/%m/%Y, %H:%M %p")
@@ -522,16 +518,4 @@ def get_msg_to_json(x):
         body = x.get('body')
         bank_name = x.get('address')
         key, json_body = parseMessage(bank_name,body, datetime_object)
-        return key, json_body
-        # if key != '':
-        #     bank, account = key.split('_')
-        #     return key, json_body
-        #     # if bank == 'Refunds':
-        #     #     paymentInfo[bank].append(json_body)
-        #     # else:
-        #     #     # print(bank,account,body)
-        #     #     if account not in paymentInfo[bank]:
-        #     #         paymentInfo[bank][account] = {}
-        #     #     paymentInfo[bank][account][x.get('readable_date')] = json_body
-        # else :
-        #     return None, None
+        return key, json_body, datetime_object
