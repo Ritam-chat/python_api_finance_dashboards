@@ -513,10 +513,11 @@ z = 0
 root = []
 
 def get_msg_to_json(x):
+    print(x)
 # for x in root:
     if True in [K in x.get('address').upper() for K in paymentInfo.keys()]:
         dt_str = x.get('readable_date').replace('Sept','Sep')
-        datetime_object = datetime.strptime(dt_str,"%d-%b-%Y %H:%M:%S %p")
+        datetime_object = datetime.strptime(dt_str,"%d/%m/%Y, %H:%M %p")
 
         body = x.get('body')
         bank_name = x.get('address')
