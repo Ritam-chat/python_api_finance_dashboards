@@ -21,8 +21,10 @@ def update_records(records):
     for record in records:
         db_ref = db.collection("Ritam").document(record)
         # Update age and favorite color
-        success = success and db_ref.update(records[record])
-
+        try:
+            db_ref.update(records[record])
+        except Exception as e:
+            print(f"\n\nError : {e}")
     return success
 
 def get_all_records():
