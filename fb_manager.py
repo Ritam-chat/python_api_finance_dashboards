@@ -1,4 +1,6 @@
-import os 
+import os
+from csv import excel
+
 from pyairtable import Api
 
 
@@ -18,13 +20,19 @@ db = firestore.client()
 
 def update_records(records):
     success = True
-    for record in records:
-        db_ref = db.collection("Ritam").document(record)
-        # Update age and favorite color
-        try:
-            db_ref.update(records[record])
-        except Exception as e:
-            print(f"\n\nError : {e}")
+    db = firestore.client()
+    batch = db.batch()
+    for key in records:
+        bank, acc, k = key.split('~')
+        db_ref = db.collection("Ritam").document(bank).collection(acc).document(k)
+        batch.update(db_ref,records[key])
+    try:
+        batch.commit()
+        success = True
+    except Exception as e:
+        success = False
+        print(f"\n\nError : {e}")
+
     return success
 
 def get_all_records():
