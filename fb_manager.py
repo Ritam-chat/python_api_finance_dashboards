@@ -15,6 +15,16 @@ app = firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
+
+def update_records(records):
+    success = True
+    for record in records:
+        db_ref = db.collection("Ritam").document(record)
+        # Update age and favorite color
+        success = success and db_ref.update(records[record])
+
+    return success
+
 def get_all_records():
     json = {}
 

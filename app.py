@@ -127,11 +127,12 @@ class UpdateRecords(Resource):
 
         data = request.json
 
+        success = fb_manager.update_records(data)
 
-
-
-
-        return "S", 200
+        if success:
+            return {"message": "Record added successfully"}, 200
+        else:
+            return {"message": "Failed to add record"}, 500
 
 
 class AddRecord(Resource):
@@ -187,7 +188,7 @@ class AddRecord(Resource):
 
 api.add_resource(AddRecord, "/add-record")
 api.add_resource(Records, "/records")
-# api.add_resource(UppercaseText, "/uppercase")
+api.add_resource(UpdateRecords, "/update-records")
 
 if __name__ == "__main__":
     app.run(debug=True)
