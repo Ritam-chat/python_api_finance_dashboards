@@ -493,6 +493,8 @@ def parseMessage(bank, msg, time):
             # print(bank,msg)
             key = BNK + '_NA'
             pass
+    if len(msg_json) > 0:
+        msg_json['tags'] = []
     return key, msg_json
 
 
@@ -519,3 +521,5 @@ def get_msg_to_json(x):
         bank_name = x.get('address')
         key, json_body = parseMessage(bank_name,body, datetime_object)
         return key, json_body, datetime_object
+    else:
+        return None, None, None
