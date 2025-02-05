@@ -1,6 +1,19 @@
 
 from datetime import datetime
+import numpy as np
 
+TAGS_LIST = {
+    'RITAM CHATTERJEE' : [['Self Transfer'],'*'],
+    'RITAM CHATTERJE' : [['Self Transfer'],'*'],
+    'ritam2021@ybl' : [['Self Transfer'],'*'],
+    'ritam.hdfc@ybl' : [['Self Transfer'],'*'],
+    'chatterjee.ritam1@ybl' : [['Self Transfer'],'*'],
+    'Ansad V' : [['Tapri','Snacks'],'Debit'],
+    'gpay-11251552163@okbizaxis ' : [['MomsKitchen','Snacks'],'Debit'],
+    'q987271354@ybl ' : [['Tapri','Snacks'],'Debit'],
+    'Cheq' : [['CC Repayment'],'Debit'],
+    'OneCard' : [['CC Repayment'],'Debit'],
+}
 
 def parseMessage(bank, msg, time):
     msg_json = {}
@@ -125,6 +138,7 @@ def parseMessage(bank, msg, time):
                 'mode': 'Withdrawal',
                 'accountType': 'Savings',
                 'to_from': 'Self',
+                'tags': ['ATM'],
                 'account': '5808' if account == '2148' else account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
@@ -141,6 +155,7 @@ def parseMessage(bank, msg, time):
                 'mode': mode,
                 'accountType': 'Savings',
                 'to_from': to,
+                'tags': ['Salary'],
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
@@ -169,6 +184,7 @@ def parseMessage(bank, msg, time):
                 'mode': 'Repayment',
                 'accountType': 'Credit Card',
                 'to_from': 'Credit Card',
+                'tags': ['CC Repayment'],
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
@@ -216,6 +232,7 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': 'Self',
                 'account': '6484',
+                'tags': ['Refund'],
                 'amount': amount.strip(),
                 'refNo': ref,
                 'time': time.strftime("%d-%b, %H:%M %p")
@@ -300,6 +317,7 @@ def parseMessage(bank, msg, time):
             msg_json = {
                 'type': 'Debit',
                 'mode': 'Withdrawal',
+                'tags': ['ATM'],
                 'accountType': 'Savings',
                 'to_from': 'Self',
                 'account': account,
@@ -328,6 +346,7 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': to,
                 'account': account,
+                'tags' : ['Fuel'],
                 'amount': amount.strip(),
                 'refNo': '',
                 'time': time.strftime("%d-%b, %H:%M %p")
@@ -356,6 +375,7 @@ def parseMessage(bank, msg, time):
                 'type': 'Debit',
                 'mode': 'Transaction',
                 'accountType': 'Credit Card',
+                'tags': ['Shopping'],
                 'to_from': to,
                 'account': '6901',
                 'amount': amount.strip(),
@@ -482,6 +502,7 @@ def parseMessage(bank, msg, time):
                 'mode': 'Transaction',
                 'accountType': 'Credit Card',
                 'to_from': to,
+                'tags': ['Fuel'],
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': '',
@@ -493,8 +514,24 @@ def parseMessage(bank, msg, time):
             # print(bank,msg)
             key = BNK + '_NA'
             pass
+
+
     if len(msg_json) > 0:
-        msg_json['tags'] = []
+        msg_json['gps'] = ""
+        if 'tags' not in msg_json:
+            msg_json['tags'] = []
+
+        k = msg_json['to_from'].strip()
+        if k in TAGS_LIST:
+            tags, type = TAGS_LIST[k]
+            print(tags,msg_json['tags'],type)
+            if type == '*':
+                msg_json['tags'].extend(tags)
+                msg_json['tags'] = list(set(msg_json['tags']))
+            elif msg_json['type'] == type:
+                msg_json['tags'].extend(tags)
+                msg_json['tags'] = list(set(msg_json['tags']))
+
     return key, msg_json
 
 
@@ -520,6 +557,7 @@ def get_msg_to_json(x):
         body = x.get('body')
         bank_name = x.get('address')
         key, json_body = parseMessage(bank_name,body, datetime_object)
-        return key, json_body, datetime_object
+        return key, json_body, datetime_object.replace(second=np.random.randint(0,60))
+        # return key, json_body, datetime.now().strftime("%Y-%m-%d : %H:%M:%S")
     else:
         return None, None, None
