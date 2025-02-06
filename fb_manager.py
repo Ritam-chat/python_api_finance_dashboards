@@ -77,15 +77,9 @@ def get_all_records():
         bank_name = bank.get().id
         for acc in bank.collections():
             id = acc.id
-            for trans in acc.list_documents():
-                try:
-                    transaction = trans.get()
-                except Exception as e:
-                    print(f"For {bank_name} & {id} error : {e}")
-                    continue
+            for transaction in acc.stream():
                 if transaction.exists:
                     # print(f"\n\nDocument data: {transaction.to_dict()},{transaction}")
-
                     if bank_name not in json:
                         json[bank_name] = {}
                         json[bank_name][id] = {}
