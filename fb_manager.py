@@ -35,23 +35,63 @@ def update_records(records):
 
     return success
 
+
+def import_all_from_xml(records,stash):
+    success = True
+
+    db = firestore.client()
+    record_batch = db.batch()
+    stash_batch = db.batch()
+    for item in records:
+        path = item[0]
+        json = item[1]
+        record_ref = db.document(path)
+        record_batch.set(record_ref,json)
+
+    for item in stash:
+        path = item[0]
+        json = item[1]
+        stash_ref = db.document(path)
+        stash_batch.set(stash_ref,json)
+
+    try:
+        record_batch.commit()
+        rec_success = True
+    except Exception as e:
+        rec_success = False
+        print(f"\n\nRec Error : {e}")
+
+    try:
+        stash_batch.commit()
+        sts_success = True
+    except Exception as e:
+        sts_success = False
+        print(f"\n\nsts Error : {e}")
+
+    return sts_success and rec_success
+
 def get_all_records():
     json = {}
 
     for bank in db.collection('Ritam').list_documents():
         bank_name = bank.get().id
         for acc in bank.collections():
+            id = acc.id
             for trans in acc.list_documents():
-                transaction = trans.get()
+                try:
+                    transaction = trans.get()
+                except Exception as e:
+                    print(f"For {bank_name} & {id} error : {e}")
+                    continue
                 if transaction.exists:
                     # print(f"\n\nDocument data: {transaction.to_dict()},{transaction}")
 
                     if bank_name not in json:
                         json[bank_name] = {}
-                        json[bank_name][acc.id] = {}
-                    if acc.id not in json[bank_name]:
-                        json[bank_name][acc.id] = {}
-                    json[bank_name][acc.id][transaction.id] = transaction.to_dict()
+                        json[bank_name][id] = {}
+                    if id not in json[bank_name]:
+                        json[bank_name][id] = {}
+                    json[bank_name][id][transaction.id] = transaction.to_dict()
                 else:
                     print("No such document!")
     return json

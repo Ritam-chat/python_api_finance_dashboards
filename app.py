@@ -184,11 +184,45 @@ class AddRecord(Resource):
         else:
             return {"message": "Failed to add record"}, 500
         
+class ImportBatch(Resource):
+    def get(self):
+        success = True
+        import xml.etree.ElementTree as ET
 
+        tree = ET.parse('sms.xml')
 
+        root = tree.getroot()
+        stash = []
+        records = []
+        for x in root.iter():
+            if x.tag !='sms':
+                continue
+            key, json, time = get_msg_to_json(x,"%d-%b-%Y %I:%M:%S %p")
+            if key is None or key == '':
+                print(f"\n\nSkipped Record : {x.get('body')}\n\n")
+                continue
+
+            if len(json) == 0:
+                rec = {'address' : x.get('address'),'body' : x.get('body'),'readable_date':x.get('readable_date')}
+                path = f"Ritam/Stash/{key.split('_')[0]}/{time}"
+                # success = fb_manager.add_to_stash(path, x)
+                stash.append([path,rec])
+            else:
+                print(time, json['refNo'],x.get('readable_date'))
+                path = f"Ritam/{key.replace('_', '/')}/{time}"
+                # success = fb_manager.add_record(path, json)
+                records.append([path,json])
+
+        # print(records)
+        # success = fb_manager.import_all_from_xml(records,stash)
+
+        if success:
+            return "Done", 200
+        return "Error", 500
 api.add_resource(AddRecord, "/add-record")
 api.add_resource(Records, "/records")
 api.add_resource(UpdateRecords, "/update-records")
+api.add_resource(ImportBatch, "/add-batch")
 
 if __name__ == "__main__":
     app.run(debug=True)

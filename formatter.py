@@ -9,10 +9,11 @@ TAGS_LIST = {
     'ritam.hdfc@ybl' : [['Self Transfer'],'*'],
     'chatterjee.ritam1@ybl' : [['Self Transfer'],'*'],
     'Ansad V' : [['Tapri','Snacks'],'Debit'],
-    'gpay-11251552163@okbizaxis ' : [['MomsKitchen','Snacks'],'Debit'],
-    'q987271354@ybl ' : [['Tapri','Snacks'],'Debit'],
+    'gpay-11251552163@okbizaxis' : [['MomsKitchen','Snacks'],'Debit'],
+    'q987271354@ybl' : [['Tapri','Snacks'],'Debit'],
     'Cheq' : [['CC Repayment'],'Debit'],
     'OneCard' : [['CC Repayment'],'Debit'],
+    'NACH' : [['SIP','Savings'],'Debit'],
 }
 
 def parseMessage(bank, msg, time):
@@ -34,7 +35,7 @@ def parseMessage(bank, msg, time):
                 'account' : account,
                 'amount' : amount,
                 'refNo' : ref,
-                'time' : time.strftime("%Y-%m-%d")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
             # print(msg_json)
@@ -51,7 +52,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Sent Rs.' in msg and 'From HDFC Bank A/C x' in msg:
@@ -67,7 +68,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'HDFC Bank Cardmember, Online Payment of Rs.' in msg and 'was credited to your card ending' in msg:
@@ -82,7 +83,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Rs.' in msg and 'credited to HDFC Bank A/c x' in msg:
@@ -97,7 +98,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref[:-1],
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Rs.' in msg and ' spent on HDFC Bank Card x' in msg:
@@ -112,7 +113,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'DEAR HDFCBANK CARDMEMBER, PAYMENT OF Rs. ' in msg and ' RECEIVED TOWARDS YOUR CREDIT CARD ENDING WITH ' in msg:
@@ -126,7 +127,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Rs.' in msg and ' withdrawn from HDFC Bank Card x' in msg:
@@ -142,7 +143,7 @@ def parseMessage(bank, msg, time):
                 'account': '5808' if account == '2148' else account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{'5808' if account == '2148' else account}"
         elif 'Update! INR ' in msg and ' deposited in HDFC Bank A/c XX' in msg:
@@ -159,7 +160,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'HDFC Bank Cardmember, Payment of Rs ' in msg and ' was credited to your card ending ' in msg:
@@ -173,7 +174,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Dear Customer, Rs.' in msg and ' is debited from A/c XXXX' in msg and ' for BillPay/Credit Card payment via HDFC Bank NetBanking. ' in msg:
@@ -188,7 +189,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Amt Sent Rs.' in msg and ' From HDFC Bank A/C *' in msg:
@@ -204,7 +205,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Rs. ' in msg and ' credited to a/c XXXXXX' in msg:
@@ -220,7 +221,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Your UPI transaction of Rs ' in msg and ' has been reversed in your HDFC Bank Credit Card due to technical problem (' in msg:
@@ -235,7 +236,7 @@ def parseMessage(bank, msg, time):
                 'tags': ['Refund'],
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = 'Refunds_NA'
         else:
@@ -260,7 +261,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Dear UPI user A/C X' in msg and ' debited by ' in msg and ' trf to ' in msg:
@@ -276,7 +277,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Dear Customer, Your A/C XXXXX' in msg and ' has a debit by ' in msg and '. Avl Bal Rs ' in msg:
@@ -291,7 +292,7 @@ def parseMessage(bank, msg, time):
                 'account': account[2:],
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account[2:]}"
         elif 'Dear SBI UPI User, ur A/cX' in msg and ' credited by Rs' in msg:
@@ -306,7 +307,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Dear SBI Customer, Rs.' in msg and ' withdrawn at ' in msg:
@@ -323,7 +324,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': ref,
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         else:
@@ -349,7 +350,7 @@ def parseMessage(bank, msg, time):
                 'tags' : ['Fuel'],
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'card ending XX6901.' in msg and 'Youve booked a blockbuster entertainment for Rs.' in msg:
@@ -364,7 +365,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif "You've hand-picked " in msg and ' on card ending XX' in msg:
@@ -380,7 +381,7 @@ def parseMessage(bank, msg, time):
                 'account': '6901',
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif "Hola! that was sweet. We have received payment against your OneCard for Rs. " in msg:
@@ -394,7 +395,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Hi, We have received a refund of Rs.' in msg and ' on your Federal One Credit Card. ' in msg:
@@ -409,7 +410,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"Refunds_{account}"
         elif 'A payment of Rs.' in msg and ' has been initiated against your OneCard bill & ' in msg:
@@ -423,7 +424,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif "You've made a purchase of Rs. " in msg and ' on card ending XX' in msg:
@@ -438,7 +439,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif "That was a delicious purchase of Rs." in msg and ' on card ending XX' in msg:
@@ -453,7 +454,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         else:
@@ -475,7 +476,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Transaction Successful! INR ' in msg and ' spent on your IDFC FIRST Bank Credit Card ending ' in msg:
@@ -490,7 +491,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Fueled Up! INR ' in msg and ' spent on your IDFC FIRST Bank Credit Card XX' in msg:
@@ -506,7 +507,7 @@ def parseMessage(bank, msg, time):
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': '',
-                'time': time.strftime("%d-%b, %H:%M %p")
+                 'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
 
@@ -548,16 +549,16 @@ z = 0
 
 root = []
 
-def get_msg_to_json(x):
+def get_msg_to_json(x, format = "%d/%m/%Y, %H:%M %p"):
 
     if True in [K in x.get('address').upper() for K in paymentInfo.keys()]:
         dt_str = x.get('readable_date').replace('Sept','Sep')
-        datetime_object = datetime.strptime(dt_str,"%d/%m/%Y, %H:%M %p")
+        datetime_object = datetime.strptime(dt_str,format)
 
         body = x.get('body')
         bank_name = x.get('address')
         key, json_body = parseMessage(bank_name,body, datetime_object)
-        return key, json_body, datetime_object.replace(second=np.random.randint(0,60))
-        # return key, json_body, datetime.now().strftime("%Y-%m-%d : %H:%M:%S")
+        # return key, json_body, datetime_object.replace(second=np.random.randint(0,60))
+        return key, json_body, datetime_object
     else:
         return None, None, None
