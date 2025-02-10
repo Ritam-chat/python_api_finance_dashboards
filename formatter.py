@@ -549,7 +549,7 @@ z = 0
 
 root = []
 
-def get_msg_to_json(x, format = "%Y/%m/%d, %H:%M:%s.%f"):
+def get_msg_to_json(x, format = "%Y/%m/%d, %H:%M:%S.%f"):
 
     if True in [K in x.get('address').upper() for K in paymentInfo.keys()]:
         dt_str = x.get('readable_date').replace('Sept','Sep')
