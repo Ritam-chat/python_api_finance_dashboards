@@ -25,7 +25,7 @@ def update_records(records):
     for key in records:
         bank, acc, k = key.split('~')
         db_ref = db.collection("Ritam").document(bank).collection(acc).document(k)
-        batch.update(db_ref,records[key])
+        batch.set(db_ref,records[key],merge=True)
     try:
         batch.commit()
         success = True
