@@ -218,10 +218,21 @@ class ImportBatch(Resource):
         if success:
             return "Done", 200
         return "Error", 500
+
+
+class Wake(Resource):
+    def get(self):
+        success = True
+
+        if success:
+            return "Done", 200
+        return "Error", 500
+
 api.add_resource(AddRecord, "/add-record")
 api.add_resource(Records, "/records")
 api.add_resource(UpdateRecords, "/update-records")
 api.add_resource(ImportBatch, "/add-batch")
+api.add_resource(Wake, "/wake-up")
 
 if __name__ == "__main__":
     app.run(debug=True)

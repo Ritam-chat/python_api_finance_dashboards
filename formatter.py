@@ -14,6 +14,7 @@ TAGS_LIST = {
     'Cheq' : [['CC Repayment'],'Debit'],
     'OneCard' : [['CC Repayment'],'Debit'],
     'NACH' : [['SIP','Savings'],'Debit'],
+    "VIGNESH FAST FOODS" : [['Asha Tiffins'],'Debit']
 }
 
 def parseMessage(bank, msg, time):
