@@ -549,12 +549,15 @@ z = 0
 
 root = []
 
-def get_msg_to_json(x, format = "%Y-%m-%dT%H:%M:%S.SSSSSSZ"):
+def get_msg_to_json(x, format = None):
 
     if True in [K in x.get('address').upper() for K in paymentInfo.keys()]:
         print(x)
         dt_str = x.get('readable_date').replace('Sept','Sep')
-        datetime_object = datetime.strptime(dt_str,format)
+        if format is None:
+            datetime_object = datetime.fromisoformat(dt_str)
+        else:
+            datetime_object = datetime.strptime(dt_str,format)
         body = x.get('body')
         bank_name = x.get('address')
         key, json_body = parseMessage(bank_name,body, datetime_object)
