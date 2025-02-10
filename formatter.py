@@ -3,18 +3,18 @@ from datetime import datetime
 import numpy as np
 
 TAGS_LIST = {
-    'RITAM CHATTERJEE' : [['Self Transfer'],'*'],
-    'RITAM CHATTERJE' : [['Self Transfer'],'*'],
-    'ritam2021@ybl' : [['Self Transfer'],'*'],
-    'ritam.hdfc@ybl' : [['Self Transfer'],'*'],
-    'chatterjee.ritam1@ybl' : [['Self Transfer'],'*'],
+    'RITAM CHATTERJEE' : [['Self Transfer', 'Ignore'],'*'],
+    'RITAM CHATTERJE' : [['Self Transfer', 'Ignore'],'*'],
+    'ritam2021@ybl' : [['Self Transfer', 'Ignore'],'*'],
+    'ritam.hdfc@ybl' : [['Self Transfer', 'Ignore'],'*'],
+    'chatterjee.ritam1@ybl' : [['Self Transfer', 'Ignore'],'*'],
     'Ansad V' : [['Tapri','Snacks'],'Debit'],
     'gpay-11251552163@okbizaxis' : [['MomsKitchen','Snacks'],'Debit'],
     'q987271354@ybl' : [['Tapri','Snacks'],'Debit'],
-    'Cheq' : [['CC Repayment'],'Debit'],
-    'OneCard' : [['CC Repayment'],'Debit'],
+    'Cheq' : [['CC Repayment', 'Ignore'],'Debit'],
+    'OneCard' : [['CC Repayment' , 'Ignore'],'Debit'],
     'NACH' : [['SIP','Savings'],'Debit'],
-    "VIGNESH FAST FOODS" : [['Asha Tiffins'],'Debit']
+    "VIGNESH FAST FOODS" : [['AshaTiffins'],'Debit']
 }
 
 def parseMessage(bank, msg, time):
@@ -82,9 +82,10 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': 'Self',
                 'account': account,
+                'tags' : ['Ignore'],
                 'amount': amount.strip(),
                 'refNo': ref,
-                 'time': time.strftime("%d-%b, %I:%M %p")
+                'time': time.strftime("%d-%b, %I:%M %p")
             }
             key = f"{BNK}_{account}"
         elif 'Rs.' in msg and 'credited to HDFC Bank A/c x' in msg:
@@ -126,6 +127,7 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': 'Self',
                 'account': account,
+                'tags': ['Ignore'],
                 'amount': amount.strip(),
                 'refNo': 'N/A',
                  'time': time.strftime("%d-%b, %I:%M %p")
@@ -173,6 +175,7 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': 'Self',
                 'account': account,
+                'tags': ['Ignore'],
                 'amount': amount.strip(),
                 'refNo': 'N/A',
                  'time': time.strftime("%d-%b, %I:%M %p")
@@ -183,10 +186,10 @@ def parseMessage(bank, msg, time):
             account, rest = rest.split(" for BillPay/Credit Card payment via HDFC Bank NetBanking. ")
             msg_json = {
                 'type': 'Debit',
-                'mode': 'Repayment',
+                'mode': 'Net Banking',
                 'accountType': 'Credit Card',
                 'to_from': 'Credit Card',
-                'tags': ['CC Repayment'],
+                'tags': ['CC Repayment','Ignore'],
                 'account': account,
                 'amount': amount.strip(),
                 'refNo': 'N/A',
@@ -394,6 +397,7 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': 'self',
                 'account': account,
+                'tags': ['Ignore'],
                 'amount': amount.strip(),
                 'refNo': 'N/A',
                  'time': time.strftime("%d-%b, %I:%M %p")
@@ -423,6 +427,7 @@ def parseMessage(bank, msg, time):
                 'accountType': 'Credit Card',
                 'to_from': 'N/A',
                 'account': account,
+                'tags': ['Ignore'],
                 'amount': amount.strip(),
                 'refNo': 'N/A',
                  'time': time.strftime("%d-%b, %I:%M %p")
