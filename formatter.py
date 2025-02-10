@@ -549,7 +549,7 @@ z = 0
 
 root = []
 
-def get_msg_to_json(x, format = "%Y/%m/%d, %H:%M:%S.%f"):
+def get_msg_to_json(x, format = "%Y-%m-%dT%H:%M:%S.SSSSSSZ"):
 
     if True in [K in x.get('address').upper() for K in paymentInfo.keys()]:
         print(x)
