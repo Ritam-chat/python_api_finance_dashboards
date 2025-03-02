@@ -21,9 +21,12 @@ paths:
           content:
             application/json:
               schema:
-                type: json
-                items:
-                  type: string
+                type: object
+                properties:
+                  message: string
+                  body: string
+                  readable-date: string
+                  address : string
         "500":
           description: Some error occured.
   /records:
@@ -35,15 +38,7 @@ paths:
       responses:
         "200": # status code
           description: A JSON array records
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    body: string
-                    readable-date: string
-                    address : string
+
   /wake-up:
     get:
       summary: Returns a status.
@@ -51,5 +46,5 @@ paths:
       responses:
         "200": # status code
           description: Successfully woke up.
-        "500" : status code
+        "500" : # status code
           description : Error
