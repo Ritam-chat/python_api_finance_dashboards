@@ -70,10 +70,10 @@ def import_all_from_xml(records,stash):
 
     return sts_success and rec_success
 
-def get_all_records():
+def get_all_records(user='Ritam'):
     json = {}
 
-    for bank in db.collection('Ritam').list_documents():
+    for bank in db.collection(user).list_documents():
         bank_name = bank.get().id
         for acc in bank.collections():
             id = acc.id

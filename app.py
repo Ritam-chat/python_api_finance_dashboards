@@ -78,9 +78,9 @@ class Records(Resource):
 
         name = request.args.get('uname')
         key = request.args.get('key')
-
+        user = request.headers['user']
         if name == 'ritariya' and key == '210102':
-            books = fb_manager.get_all_records()
+            books = fb_manager.get_all_records(user)
         else:
             return "Unable to Authenticate", 500
         return books, 200
@@ -166,17 +166,20 @@ class AddRecord(Resource):
 
         data = request.json
         key, json, time = get_msg_to_json(data)
-
+        if 'user' in data:
+           user = data.get('user')
+        else:
+            user = 'Ritam'
         if key is None or key == '':
             print(f"\n\nSkipped Record : {data}\n\n")
             return {"message" : f"Skipped Record : {data}"}
 
         if len(json) == 0:
-            path = f"Ritam/Stash/{key.split('_')[0]}/{time}"
+            path = f"{user}/Stash/{key.split('_')[0]}/{time}"
             success = fb_manager.add_to_stash(path,data)
         # Call the add_record function to add the record to the DB table
         else:
-            path = f"Ritam/{key.replace('_', '/')}/{time}"
+            path = f"{user}/{key.replace('_', '/')}/{time}"
             success = fb_manager.add_record(path, json)
         if success:
             return {"message": "Record added successfully"}, 200
