@@ -4,7 +4,8 @@ endpoints:
       displayName: finance
       service:
         basePath: /
-        port: 8080
+        port: 5000
       type: REST
+      schemaFilePath: /app_data/openapi.yaml
       networkVisibilities:
         - Public
