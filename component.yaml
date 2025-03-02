@@ -1,0 +1,7 @@
+schemaVersion: 1.0 
+ # Example endpoint configuration
+endpoints:
+- name: finance
+  service:
+     port: 8080
+  type: REST
