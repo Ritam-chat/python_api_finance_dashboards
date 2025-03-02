@@ -7,11 +7,11 @@ from pyairtable import Api
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'Cert.json'
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/app_data/Cert.json'
 
 
 # Use a service account.
-cred = credentials.Certificate('Cert.json')
+cred = credentials.Certificate('/app_data/Cert.json')
 
 app = firebase_admin.initialize_app(cred)
 
