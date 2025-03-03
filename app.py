@@ -126,7 +126,12 @@ class UpdateRecords(Resource):
 
         data = request.json
 
-        success = fb_manager.update_records(data)
+        if 'user' in request.headers:
+           user = request.headers['user']
+        else:
+            user = 'Ritam'
+
+        success = fb_manager.update_records(user , data)
 
         if success:
             return {"message": "Record added successfully"}, 200
@@ -166,10 +171,12 @@ class AddRecord(Resource):
 
         data = request.json
         key, json, time = get_msg_to_json(data)
-        if 'user' in data:
-           user = data.get('user')
+
+        if 'user' in request.headers:
+           user = request.headers['user']
         else:
             user = 'Ritam'
+
         if key is None or key == '':
             print(f"\n\nSkipped Record : {data}\n\n")
             return {"message" : f"Skipped Record : {data}"}
@@ -228,7 +235,7 @@ class Wake(Resource):
         success = True
 
         if success:
-            return "Done", 200
+            return "Woke-up, Thank u :-)", 200
         return "Error", 500
 
 api.add_resource(AddRecord, "/add-record")

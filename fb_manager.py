@@ -18,13 +18,13 @@ app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 
-def update_records(records):
+def update_records(user, records):
     success = True
     db = firestore.client()
     batch = db.batch()
     for key in records:
         bank, acc, k = key.split('~')
-        db_ref = db.collection("Ritam").document(bank).collection(acc).document(k)
+        db_ref = db.collection(user).document(bank).collection(acc).document(k)
         batch.set(db_ref,records[key],merge=True)
     try:
         batch.commit()

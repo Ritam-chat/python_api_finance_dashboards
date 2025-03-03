@@ -12,32 +12,91 @@ servers:
 
 paths:
   /add-record:
-    post:
-      summary: adds a record in firebase.
-      description: same
-      responses:
-        "200": # status code
-          description: Record added Successfully!
+      summary: 'Adds a record to firebase for a certain user.'
+      post:
+        summary: 'A post request for adding a record to firebase.'
+        description: ''
+        operationId: add-record
+        parameters:
+          - name: user
+            in: header
+            description: 'Provide the user name, the records needs to be added to'
+            required: true
+            schema:
+              type: string
+        requestBody:
+          description: 'Add an existent data in the store'
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message: string
-                  body: string
-                  readable-date: string
-                  address : string
-        "500":
-          description: Some error occured.
+               $ref: '#/components/schemas/sms'
+        responses:
+          '400':
+            description: 'Invalid username supplied'
+          '404':
+            description: 'User not found'
+          '200':
+            description: 'Successfully added the response.'
+
   /records:
     get:
-      summary: Returns a list of records.
-      description: Optional extended description in CommonMark or HTML.
+      summary: 'Returns a list of records for the given user.'
       parameters:
-        user : string
+        - name : user
+          in: header
+          description: 'Provide the user name, the records needs to be added to'
+          required: true
+          schema:
+            type: string
+
+        - name: username
+          in: query
+          description: 'Provide the login creds, username'
+          required: false
+          schema:
+            type: string
+
+        - name: password
+          in: query
+          description: 'Provide the login creds, password'
+          required: false
+          schema:
+            type: string
+
       responses:
         "200": # status code
-          description: A JSON array records
+          description: 'All the records of the user.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transactions'
+
+  /update-records:
+      summary: 'updates a record to firebase for a certain user.'
+      post:
+        summary: 'A post request for updating some record to firebase.'
+        description: ''
+        operationId: update-record
+        parameters:
+          - name: user
+            in: header
+            description: 'Provide the user name, the records needs to be added to'
+            required: true
+            schema:
+              type: string
+        requestBody:
+          description: 'Update some existing records in the store'
+          content:
+            application/json:
+              schema:
+               $ref: '#/components/schemas/transaction-array'
+        responses:
+          '400':
+            description: 'Invalid username supplied'
+          '404':
+            description: 'User not found'
+          '200':
+            description: 'Successfully updates the records.'
 
   /wake-up:
     get:
@@ -45,6 +104,82 @@ paths:
       description: Returns the status.
       responses:
         "200": # status code
-          description: Successfully woke up.
+          description: 'Successfully woke up.'
         "500" : # status code
-          description : Error
+          description : 'Error'
+
+
+
+components:
+  schemas:
+    sms:
+      type: object
+      properties:
+        body:
+          type: string
+          example: 'This is a sample message'
+        address:
+          type: string
+          example: 'HDFC-BANK'
+        readable-date:
+          type: string
+          format: date-time
+
+    transaction-array:
+      type: array
+      items:
+        type : object
+        additionalProperties:
+          $ref: '#/components/schemas/transaction'
+
+    transaction:
+      type: object
+      properties:
+        to_from:
+          type : string
+          description : 'The transaction made to / from'
+        tags:
+          type: array
+          description: 'Tags for the translation'
+          items:
+            type : string
+        type:
+          type: string
+          description: 'Type of the transaction'
+        time:
+          type: string
+          description: 'Tags for the translation'
+        gps:
+          type: string
+          description: 'Place of the translation'
+        account:
+          type : string
+          description: 'Account of the translation'
+        mode:
+          type : string
+          description: 'Mode for the translation'
+        accountType:
+          type : string
+          description: 'Account type of the translation'
+        amount:
+          type: string
+          description: 'Amount for the translation'
+        refNo:
+          type : string
+          description: 'RefNo of the translation'
+
+    bank-info:
+      type: object
+      additionalProperties:
+          type : object
+          additionalProperties:
+              type : object
+              additionalProperties:
+                $ref: '#/components/schemas/transaction'
+
+    transactions:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/bank-info'
+
+
