@@ -6,6 +6,7 @@ endpoints:
         basePath: /
         port: 5000
       type: REST
+      url: http://localhost:8080
       schemaFilePath: /app_data/openapi.yaml
       networkVisibilities:
         - Public

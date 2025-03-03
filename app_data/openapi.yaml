@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://29abb700-c779-4e23-b304-81fce79e18df-dev.e1-us-east-azure.choreoapis.dev/default/fiance-endpoint/v1.0
     description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
+  - url: http://localhost:8080
     description: Optional server description, e.g. Internal staging server for testing
 
 paths:
