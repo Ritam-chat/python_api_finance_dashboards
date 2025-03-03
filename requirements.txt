@@ -5,3 +5,4 @@ pyairtable
 gunicorn
 firebase-admin
 numpy
+flask-cors
