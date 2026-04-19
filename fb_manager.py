@@ -11,7 +11,7 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/app_data/Cert.json'
 
 
 # Use a service account.
-cred = credentials.Certificate('/app_data/Cert.json')
+cred = credentials.Certificate('./app_data/Cert.json')
 
 app = firebase_admin.initialize_app(cred)
 
@@ -102,6 +102,23 @@ def add_record(path, data):
     db.document(path).set(data)
 
     return True
+
+
+def get_settings(user='Ritam'):
+    doc_ref = db.collection(user).document('Settings')
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict()
+    return {}
+
+def update_settings(user, data):
+    doc_ref = db.collection(user).document('Settings')
+    try:
+        doc_ref.set(data, merge=True)
+        return True
+    except Exception as e:
+        print(f"Settings Error: {e}")
+        return False
 
 
 if __name__ == '__main__':

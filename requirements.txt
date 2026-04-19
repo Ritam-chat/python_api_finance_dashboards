@@ -6,3 +6,4 @@ gunicorn
 firebase-admin
 numpy
 flask-cors
+openai

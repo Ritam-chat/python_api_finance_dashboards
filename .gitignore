@@ -1,0 +1,6 @@
+__pycache__/
+*.env
+.env
+app_data/cert.json
+cert.json
+SA.json
