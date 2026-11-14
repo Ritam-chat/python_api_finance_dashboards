@@ -7,3 +7,4 @@ firebase-admin
 numpy
 flask-cors
 openai
+dotenv

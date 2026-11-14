@@ -4,3 +4,5 @@ __pycache__/
 app_data/cert.json
 cert.json
 SA.json
+
+.vercel

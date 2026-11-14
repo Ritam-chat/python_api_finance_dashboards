@@ -3,14 +3,17 @@ from flask_restful import Api, Resource
 from flasgger import Swagger
 import urllib.parse
 from datetime import datetime
+import random
+import string
 
 import fb_manager
+from fb_manager import verify_creds, add_new_user, get_users, update_memo
 from formatter import get_msg_to_json
 from llm_parser import should_skip, scrub_sms, parse_with_llm, reconstruct, detect_bank
 from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, allow_headers="*")
 api = Api(app)
 
 swagger = Swagger(app)
@@ -82,13 +85,9 @@ class Records(Resource):
                                         description: The author of the book
         """
 
-        name = request.args.get('uname')
-        key = request.args.get('key')
-        user = request.headers['user']
-        if name == 'ritariya' and key == '210102':
-            books = fb_manager.get_all_records(user)
-        else:
-            return "Unable to Authenticate", 500 
+        since = request.args.get('since')
+        user = request.headers.get('user', request.args.get('uname', 'Ritam'))
+        books = fb_manager.get_all_records(user, since_timestamp=since)
         return books, 200
 
 
@@ -151,77 +150,180 @@ class AddRecord(Resource):
         if not data:
             return {"message": "Empty body"}, 400
 
+        print("\n\n\n",data)    
         address = data.get('address', '')
         body = data.get('body', '')
         readable_date = data.get('readable_date', '')
+        request_tags = data.get('tags', [])
+        request_gps = data.get('gps', "")
         user = request.headers.get('user', 'Ritam')
+
+        
         
         try:
-            time_id = str(datetime.strptime(readable_date, "%d/%m/%y %I:%M %p").isoformat())
-        except:
-             # Fallback timestamp logic if unparseable
-            time_id = readable_date.replace('/', '-').replace(' ', '_')
-
-        # Fetch User Settings
-        settings = fb_manager.get_settings(user)
-        configured_banks = settings.get('configuredBanks', [])
-
-        # Validate Bank Presence
-        bank_name = detect_bank(address)
-        bank_configured = any(b.get('bankName', '').upper() == bank_name.upper() for b in configured_banks)
+            try:
+                if not readable_date: raise ValueError("Empty date")
+                time_id = str(datetime.strptime(readable_date, "%d/%m/%y %I:%M %p").isoformat())
+            except:
+                 # Fallback timestamp logic if unparseable or empty
+                time_id = readable_date.replace('/', '-').replace(' ', '_') if readable_date else str(int(datetime.now().timestamp() * 1000))
+                if not time_id: time_id = str(int(datetime.now().timestamp() * 1000))
+                
+            # Fetch User Settings
+            settings = fb_manager.get_settings(user)
+            configured_banks = settings.get('configuredBanks', [])
+            custom_tags = settings.get('customTags', [])
+            categories = settings.get('categories', [])
+            categorization_rules = settings.get('categorizationRules', {})
+            print("\n\n\nAddress:",address,"\n Body:",body,"\n User:",user,"\n Date: ",readable_date,"\n Time ID: ",time_id, "\n GPS : ",request_gps, "\n Tags : ",request_tags)
+            # Validate Bank Presence
+            bank_name = detect_bank(address)
+            bank_configured = any(b.get('bankName', '').upper() == bank_name.upper() for b in configured_banks)
         
-        if not bank_configured:
-            stash_data = {"raw": body, "skip_reason": "needs_review_not_configured"}
-            fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
-            return {"message": "Skipped: needs_review_not_configured"}, 200
+            if not bank_configured:
+                stash_data = {
+                    "raw": body, 
+                    "skip_reason": "needs_review_not_configured",
+                    "user": user,
+                    "address": address,
+                    "readable_date": readable_date,
+                    "tags": request_tags,
+                    "gps": request_gps
+                }
+                fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
+                return {"message": "Skipped: needs_review_not_configured"}, 200
 
-        # Stage 1: Pre-validation
-        skip, reason = should_skip(address, body)
-        if skip:
-            stash_data = {"raw": body, "skip_reason": reason}
-            fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
-            return {"message": f"Skipped: {reason}"}, 200
+            # Stage 1: Pre-validation
+            skip, reason = should_skip(address, body)
+            if skip:
+                stash_data = {
+                    "raw": body, 
+                    "skip_reason": reason,
+                    "user": user,
+                    "address": address,
+                    "readable_date": readable_date,
+                    "tags": request_tags,
+                    "gps": request_gps
+                }
+                fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
+                return {"message": f"Skipped: {reason}"}, 200
 
-        # Stage 2: Scrub
-        scrubbed_body, tokens = scrub_sms(body)
+            print("Not Skipped", bank_name)
+            # Stage 2: Parse with LLM (Directly use raw body)
+            llm_result = parse_with_llm(
+                body, address, readable_date, configured_banks, 
+                request_tags, request_gps, custom_tags, categories, categorization_rules
+            )
 
-        # Stage 3: LLM parse
-        llm_result = parse_with_llm(scrubbed_body, address, readable_date)
+            if llm_result is None:
+                # LLM call failed — fallback
+                stash_data = {
+                    "raw": body, 
+                    "skip_reason": "llm_error",
+                    "user": user,
+                    "address": address,
+                    "readable_date": readable_date,
+                    "tags": request_tags,
+                    "gps": request_gps
+                }
+                fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
+                return {"message": "Stashed: LLM error"}, 200
 
-        if llm_result is None:
-            # LLM call failed — fallback
-            stash_data = {"raw": body, "skip_reason": "llm_error"}
-            fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
-            return {"message": "Stashed: LLM error"}, 200
+            if not llm_result.get("is_transaction"):
+                stash_data = {
+                    "raw": body, 
+                    "skip_reason": "llm_classified_non_transaction",
+                    "user": user,
+                    "address": address,
+                    "readable_date": readable_date,
+                    "tags": request_tags,
+                    "gps": request_gps
+                }
+                fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
+                return {"message": "Skipped: not a transaction"}, 200
 
-        if not llm_result.get("is_transaction"):
-            stash_data = {"raw": body, "skip_reason": "llm_classified_non_transaction"}
-            fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
-            return {"message": "Skipped: not a transaction"}, 200
+            print("LLM Result : ",llm_result)
+            transaction = llm_result # Directly use LLM result
+            account = transaction.get("account", "UNKNOWN")
+            
+            if transaction.get('gps','') == '':
+                transaction['gps'] = request_gps
+            # Validate Account Specifics
+            # Find the exact configuration match (Primary or Linked Card)
+            target_config = None
+            extracted_acc = str(account).strip()
+            configs_for_bank = [b for b in configured_banks if b.get('bankName', '').upper() == bank_name.upper()]
+            
+            for config in configs_for_bank:
+                primary_tail = config.get('accountDigits', '').strip()
+                linked_cards = config.get('linkedCards', {}) # Map: {digits: nickname}
+                
+                # Check if matches primary
+                if primary_tail and extracted_acc.endswith(primary_tail):
+                    target_config = config
+                    break
+                
+                # Check if matches any linked card
+                matched_card_nickname = None
+                for card_digits, nickname in linked_cards.items():
+                    if extracted_acc.endswith(str(card_digits).strip()):
+                        matched_card_nickname = nickname
+                        break
+                
+                if matched_card_nickname:
+                    target_config = config
+                    # Route to primary account
+                    account = primary_tail if primary_tail else account
+                    # Update transaction object
+                    transaction['account'] = account
+                    if "Debit Card Transaction" not in transaction.get('tags', []):
+                        transaction.setdefault('tags', []).append("Debit Card Transaction")
+                    if matched_card_nickname and matched_card_nickname not in transaction.get('tags', []):
+                        transaction.setdefault('tags', []).append(matched_card_nickname)
+                    break
 
-        # Reconstruct
-        transaction = reconstruct(llm_result, tokens)
-        account = transaction.get("account", "UNKNOWN")
-
-        # Validate Account Specifics
-        # Only reject if the user HAS configured an account tail for this bank, and it DOES NOT match.
-        configs_for_bank = [b for b in configured_banks if b.get('bankName', '').upper() == bank_name.upper()]
-        
-        # If any configs for this bank have a specific account tail, check if we match it.
-        # If all configs for this bank have blank account tails, we assume all accounts are accepted.
-        has_specific_tails = any(bool(b.get('accountDigits', '').strip()) for b in configs_for_bank)
-        
-        if has_specific_tails:
-             # Check if our extracted `account` ends with any of the configured tails
-             matched_tail = any(account.endswith(b.get('accountDigits', '').strip()) for b in configs_for_bank if b.get('accountDigits', '').strip())
-             if not matched_tail:
-                  stash_data = {"raw": body, "skip_reason": "needs_review_not_configured_account"}
+            has_specific_tails = any(bool(b.get('accountDigits', '').strip()) for b in configs_for_bank)
+            
+            if has_specific_tails and not target_config:
+                  stash_data = {
+                      "raw": body, 
+                      "skip_reason": "needs_review_not_configured_account",
+                      "user": user,
+                      "address": address,
+                      "readable_date": readable_date,
+                      "tags": request_tags,
+                      "gps": request_gps
+                  }
                   fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
                   return {"message": "Skipped: needs_review_not_configured_account"}, 200
-        
-        # Save to Firestore at /{user}/{bank}/{account}/{timestamp}
-        fb_manager.add_record(f"{user}/{bank_name}/{account}/{time_id}", transaction)
-        return {"message": "Record added successfully"}, 200
+
+            
+            # Ensure amount is a number if possible
+            try:
+                if isinstance(transaction.get('amount'), str):
+                     transaction['amount'] = float(transaction['amount'].replace(',', ''))
+            except:
+                pass
+
+            # Save to Firestore at /{user}/{bank}/{account}/{timestamp}
+            fb_manager.add_record(f"{user}/{bank_name}/{account}/{time_id}", transaction)
+            return {"message": "Record added successfully"}, 200
+        except Exception as e:
+            print(f"CRITICAL ERROR in AddRecord: {e}")
+            # If anything crashes, try to stash the message as a fallback
+            try:
+                stash_time_id = readable_date.replace('/', '-').replace(' ', '_') if readable_date else str(int(datetime.now().timestamp()))
+                fallback_stash = {
+                    "raw": body,
+                    "skip_reason": f"system_error_{str(e)[:50]}",
+                    "user": user,
+                    "address": address,
+                    "readable_date": readable_date
+                }
+                fb_manager.add_to_stash(f"{user}/Stash/{address}/{stash_time_id}", fallback_stash)
+            except:
+                pass
+            return {"message": f"Server Error: {str(e)}"}, 500
         
 class ImportBatch(Resource):
     def get(self):
@@ -268,6 +370,39 @@ class Wake(Resource):
             return "Woke-up, Thank u :-)", 200
         return "Error", 500
 
+class UpdateMemo(Resource):
+    def post(self):
+        data = request.json
+        user = request.headers.get('User', 'Ritam')
+        success = fb_manager.update_memo(user, data)
+        if success:
+            return {"message": "Success"}, 200
+        return {"message": "Error"}, 500
+
+class Authenticate(Resource):
+    def get(self):
+        username = request.headers.get('Username', '')
+        password = request.headers.get('Password', '')
+        success = verify_creds(username, password)
+        if success:
+            return "User Authenticated!", 200
+        return "Error", 500
+
+class SignUp(Resource):
+    def post(self):
+        data = request.json
+        success, message = add_new_user(data)
+        if success:
+            return {'message':"User Added!"}, 200
+        if message == 404:
+            return {'message':'User Exists!'}, 404
+        return {'message':'Error'}, 500
+
+class GetUsers(Resource):
+    def get(self):
+        userList = get_users()
+        return userList
+
 class Settings(Resource):
     def get(self):
         user = request.headers.get('user', 'Ritam')
@@ -282,12 +417,109 @@ class Settings(Resource):
             return {"message": "Settings updated successfully"}, 200
         return {"message": "Failed to update settings"}, 500
 
+class Stash(Resource):
+    def get(self):
+        user = request.headers.get('user', request.args.get('uname', 'Ritam'))
+        since = request.args.get('since')
+        stash = fb_manager.get_stash(user, since_timestamp=since)
+        return stash, 200
+
+    def delete(self):
+        user = request.headers.get('user', 'Ritam')
+        address = request.args.get('address')
+        time_id = request.args.get('id')
+        if not address or not time_id:
+            return {"message": "Missing address or id"}, 400
+        success = fb_manager.delete_stash_item(user, address, time_id)
+        if success:
+            return {"message": "Item deleted from stash"}, 200
+        return {"message": "Failed to delete item"}, 500
+
+    def post(self):
+        user = request.headers.get('user', 'Ritam')
+        data = request.json
+        old_address = request.args.get('address')
+        old_id = request.args.get('id')
+        
+        new_address = data.get('address')
+        new_id = data.get('id')
+        
+        if not new_address or not new_id:
+            return {"message": "Missing new address or id"}, 400
+            
+        # If path changed, delete old one
+        if old_address and old_id and (old_address != new_address or old_id != new_id):
+            fb_manager.delete_stash_item(user, old_address, old_id)
+            
+        fb_manager.add_to_stash(f"{user}/Stash/{new_address}/{new_id}", data)
+        return {"message": "Stash item updated"}, 200
+
+class ClearStash(Resource):
+    def delete(self):
+        user = request.headers.get('user', 'Ritam')
+        success = fb_manager.clear_stash(user)
+        if success:
+            return {"message": "All items deleted from stash"}, 200
+        return {"message": "Failed to clear stash"}, 500
+
+class ManualRecord(Resource):
+    def post(self):
+        user = request.headers.get('user', 'Ritam')
+        data = request.json
+        bank = data.get('bank', 'Unknown')
+        account = data.get('account', 'Manual')
+        amount = data.get('amount', 0)
+        to_from = data.get('to_from', 'N/A')
+        trans_type = data.get('type', 'Debit')
+        tags = data.get('tags', [])
+        category = data.get('category', 'Miscellaneous')
+        date_str = data.get('date') 
+
+        ref_no = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+        
+        try:
+            # Try to use provided date for time_id
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            time_id = dt.isoformat()
+            # Format time as a human-readable string (same as SMS-parsed transactions)
+            readable_time = dt.strftime('%d %b, %I:%M %p').lstrip('0')
+        except:
+            dt = datetime.now()
+            time_id = dt.isoformat()
+            readable_time = date_str or dt.strftime('%d %b, %I:%M %p').lstrip('0')
+
+        transaction = {
+            "type": trans_type,
+            "mode": "Manual",
+            "accountType": data.get('accountType', 'Savings'),
+            "account": account,
+            "to_from": to_from,
+            "amount": amount,
+            "refNo": ref_no,
+            "time": readable_time,
+            "tags": tags,
+            "category": category,
+            "gps": "",
+            "is_manual": True
+        }
+
+        path = f"{user}/{bank}/{account}/{time_id}"
+        fb_manager.add_record(path, transaction)
+        return {"message": "Manual record added", "time_id": time_id}, 200
+
 api.add_resource(AddRecord, "/add-record")
 api.add_resource(Records, "/records")
 api.add_resource(UpdateRecords, "/update-records")
 api.add_resource(ImportBatch, "/add-batch")
 api.add_resource(Wake, "/wake-up")
 api.add_resource(Settings, "/settings")
+api.add_resource(Authenticate, "/auth")
+api.add_resource(SignUp, "/sign-up")
+api.add_resource(GetUsers, "/get_usernames")
+api.add_resource(UpdateMemo, "/update-memo")
+api.add_resource(Stash, "/stash")
+api.add_resource(ClearStash, "/stash/clear")
+api.add_resource(ManualRecord, "/manual-record")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

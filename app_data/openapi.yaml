@@ -5,7 +5,7 @@ info:
   version: 0.1.9
 
 servers:
-  - url: https://29abb700-c779-4e23-b304-81fce79e18df-dev.e1-us-east-azure.choreoapis.dev/default/fiance-endpoint/v1.0
+  - url: finance---api.vercel.app
     description: Optional server description, e.g. Main (production) server
   - url: http://localhost:8080
     description: Optional server description, e.g. Internal staging server for testing
