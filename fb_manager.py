@@ -7,24 +7,55 @@ from pyairtable import Api
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/app_data/Cert.json'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+cert_candidates = [
+    os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
+    os.path.join(BASE_DIR, 'app_data', 'Cert.json'),
+    os.path.join(BASE_DIR, 'app_data', 'cert.json'),
+    os.path.join(BASE_DIR, 'SA.json'),
+]
 
-# Use a service account.
-cred = credentials.Certificate('./app_data/Cert.json')
+db = None
 
-app = firebase_admin.initialize_app(cred)
+def get_db():
+    global db
+    if db is not None:
+        return db
 
-db = firestore.client()
+    for p in cert_candidates:
+        if p and os.path.exists(p) and os.path.getsize(p) > 0:
+            try:
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = p
+                cred = credentials.Certificate(p)
+                try:
+                    firebase_admin.get_app()
+                except ValueError:
+                    firebase_admin.initialize_app(cred)
+                db = firestore.client()
+                return db
+            except Exception as e:
+                print(f"[ERROR] Failed to initialize Firebase with {p}: {e}")
+                return None
+
+    print(f"[WARNING] Firebase credentials not found or empty in {BASE_DIR}/app_data/Cert.json or SA.json.")
+    return None
+
+# Try initializing on startup
+get_db()
 
 
 def update_records(user, records):
+    current_db = get_db()
+    if current_db is None:
+        print("[ERROR] Firebase database not initialized. Cannot update records.")
+        return False
+
     success = True
-    db = firestore.client()
-    batch = db.batch()
+    batch = current_db.batch()
     for key in records:
         bank, acc, k = key.split('~')
-        db_ref = db.collection(user).document(bank).collection(acc).document(k)
+        db_ref = current_db.collection(user).document(bank).collection(acc).document(k)
         batch.set(db_ref,records[key],merge=True)
     try:
         batch.commit()
@@ -37,21 +68,24 @@ def update_records(user, records):
 
 
 def import_all_from_xml(records,stash):
-    success = True
+    current_db = get_db()
+    if current_db is None:
+        print("[ERROR] Firebase database not initialized. Cannot import.")
+        return False
 
-    db = firestore.client()
-    record_batch = db.batch()
-    stash_batch = db.batch()
+    success = True
+    record_batch = current_db.batch()
+    stash_batch = current_db.batch()
     for item in records:
         path = item[0]
         json = item[1]
-        record_ref = db.document(path)
+        record_ref = current_db.document(path)
         record_batch.set(record_ref,json)
 
     for item in stash:
         path = item[0]
         json = item[1]
-        stash_ref = db.document(path)
+        stash_ref = current_db.document(path)
         stash_batch.set(stash_ref,json)
 
     try:
@@ -71,9 +105,14 @@ def import_all_from_xml(records,stash):
     return sts_success and rec_success
 
 def get_all_records(user='Ritam'):
+    current_db = get_db()
+    if current_db is None:
+        print(f"[ERROR] Firebase database not initialized. Please copy your Firebase service account key to {BASE_DIR}/app_data/Cert.json")
+        return {}
+
     json = {}
 
-    for bank in db.collection(user).list_documents():
+    for bank in current_db.collection(user).list_documents():
         bank_name = bank.get().id
         for acc in bank.collections():
             id = acc.id
@@ -92,27 +131,41 @@ def get_all_records(user='Ritam'):
 
 
 def add_to_stash(path,data):
+    current_db = get_db()
+    if current_db is None:
+        print("[ERROR] Firebase database not initialized.")
+        return False
 
-    db.document(path).set(data)
-
+    current_db.document(path).set(data)
     return True
 
 def add_record(path, data):
+    current_db = get_db()
+    if current_db is None:
+        print("[ERROR] Firebase database not initialized.")
+        return False
 
-    db.document(path).set(data)
-
+    current_db.document(path).set(data)
     return True
 
 
 def get_settings(user='Ritam'):
-    doc_ref = db.collection(user).document('Settings')
+    current_db = get_db()
+    if current_db is None:
+        return {}
+
+    doc_ref = current_db.collection(user).document('Settings')
     doc = doc_ref.get()
     if doc.exists:
         return doc.to_dict()
     return {}
 
 def update_settings(user, data):
-    doc_ref = db.collection(user).document('Settings')
+    current_db = get_db()
+    if current_db is None:
+        return False
+
+    doc_ref = current_db.collection(user).document('Settings')
     try:
         doc_ref.set(data, merge=True)
         return True
