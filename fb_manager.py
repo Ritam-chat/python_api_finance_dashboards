@@ -1,5 +1,6 @@
 import os
 from csv import excel
+import concurrent.futures
 
 from pyairtable import Api
 
@@ -104,30 +105,43 @@ def import_all_from_xml(records,stash):
 
     return sts_success and rec_success
 
-def get_all_records(user='Ritam'):
+EXCLUDE_BANKS = {'Memo', 'Settings', 'userInfo', 'Stash'}
+
+def get_all_records(user='Ritam', since=None):
     current_db = get_db()
     if current_db is None:
         print(f"[ERROR] Firebase database not initialized. Please copy your Firebase service account key to {BASE_DIR}/app_data/Cert.json")
         return {}
 
-    json = {}
+    json_data = {}
 
-    for bank in current_db.collection(user).list_documents():
-        bank_name = bank.get().id
-        for acc in bank.collections():
-            id = acc.id
-            for transaction in acc.stream():
-                if transaction.exists:
-                    # print(f"\n\nDocument data: {transaction.to_dict()},{transaction}")
-                    if bank_name not in json:
-                        json[bank_name] = {}
-                        json[bank_name][id] = {}
-                    if id not in json[bank_name]:
-                        json[bank_name][id] = {}
-                    json[bank_name][id][transaction.id] = transaction.to_dict()
-                else:
-                    print("No such document!")
-    return json
+    def fetch_collection(bank_name, coll_ref):
+        coll_id = coll_ref.id
+        docs = {}
+        for transaction in coll_ref.stream():
+            if transaction.exists:
+                docs[transaction.id] = transaction.to_dict()
+        return bank_name, coll_id, docs
+
+    tasks = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        for bank in current_db.collection(user).list_documents():
+            bank_name = bank.id
+            if bank_name in EXCLUDE_BANKS:
+                continue
+            for acc in bank.collections():
+                tasks.append(executor.submit(fetch_collection, bank_name, acc))
+
+        for future in concurrent.futures.as_completed(tasks):
+            try:
+                bname, acc_id, docs = future.result()
+                if bname not in json_data:
+                    json_data[bname] = {}
+                json_data[bname][acc_id] = docs
+            except Exception as e:
+                print(f"[ERROR] Failed fetching subcollection: {e}")
+
+    return json_data
 
 
 def add_to_stash(path,data):

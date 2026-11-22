@@ -7,3 +7,5 @@ SA.json
 venv/*
 venv
 .DS_Store
+.vercel
+.env*

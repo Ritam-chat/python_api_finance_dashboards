@@ -84,9 +84,10 @@ class Records(Resource):
 
         name = request.args.get('uname')
         key = request.args.get('key')
-        user = request.headers['user']
+        since = request.args.get('since')
+        user = request.headers.get('user', 'Ritam')
         if name == 'ritariya' and key == '210102':
-            books = fb_manager.get_all_records(user)
+            books = fb_manager.get_all_records(user, since=since)
         else:
             return "Unable to Authenticate", 500 
         return books, 200
