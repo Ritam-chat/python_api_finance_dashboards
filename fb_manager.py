@@ -217,10 +217,15 @@ def get_settings(user='Ritam'):
     if current_db is None:
         return {}
 
-    doc_ref = current_db.collection(user).document('Settings')
-    doc = doc_ref.get()
-    if doc.exists:
-        return doc.to_dict()
+    try:
+        from google.api_core.retry import Retry
+        doc_ref = current_db.collection(user).document('Settings')
+        doc = doc_ref.get(retry=Retry(maximum=1.0, deadline=2.0), timeout=2.0)
+        if doc.exists:
+            return doc.to_dict()
+    except Exception as e:
+        print(f"[WARNING] Settings fetch error: {e}")
+        return {}
     return {}
 
 def update_settings(user, data):
