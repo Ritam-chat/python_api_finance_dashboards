@@ -1,4 +1,5 @@
 import os
+import time
 from csv import excel
 import concurrent.futures
 
@@ -61,6 +62,7 @@ def update_records(user, records):
     try:
         batch.commit()
         success = True
+        invalidate_records_cache()
     except Exception as e:
         success = False
         print(f"\n\nError : {e}")
@@ -107,11 +109,25 @@ def import_all_from_xml(records,stash):
 
 EXCLUDE_BANKS = {'Memo', 'Settings', 'userInfo', 'Stash'}
 
+_RECORDS_CACHE = {}
+_CACHE_TIMESTAMP = 0
+CACHE_TTL = 300  # 5 minutes cache to prevent hitting Firestore daily read quota
+
+def invalidate_records_cache():
+    global _CACHE_TIMESTAMP
+    _CACHE_TIMESTAMP = 0
+
 def get_all_records(user='Ritam', since=None):
+    global _RECORDS_CACHE, _CACHE_TIMESTAMP
+
+    # Return cached data if fresh
+    if _RECORDS_CACHE and (time.time() - _CACHE_TIMESTAMP < CACHE_TTL):
+        return _RECORDS_CACHE
+
     current_db = get_db()
     if current_db is None:
         print(f"[ERROR] Firebase database not initialized. Please copy your Firebase service account key to {BASE_DIR}/app_data/Cert.json")
-        return {}
+        return _RECORDS_CACHE or {}
 
     json_data = {}
 
@@ -123,25 +139,32 @@ def get_all_records(user='Ritam', since=None):
                 docs[transaction.id] = transaction.to_dict()
         return bank_name, coll_id, docs
 
-    tasks = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        for bank in current_db.collection(user).list_documents():
-            bank_name = bank.id
-            if bank_name in EXCLUDE_BANKS:
-                continue
-            for acc in bank.collections():
-                tasks.append(executor.submit(fetch_collection, bank_name, acc))
+    try:
+        tasks = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            for bank in current_db.collection(user).list_documents():
+                bank_name = bank.id
+                if bank_name in EXCLUDE_BANKS:
+                    continue
+                for acc in bank.collections():
+                    tasks.append(executor.submit(fetch_collection, bank_name, acc))
 
-        for future in concurrent.futures.as_completed(tasks):
-            try:
-                bname, acc_id, docs = future.result()
-                if bname not in json_data:
-                    json_data[bname] = {}
-                json_data[bname][acc_id] = docs
-            except Exception as e:
-                print(f"[ERROR] Failed fetching subcollection: {e}")
+            for future in concurrent.futures.as_completed(tasks):
+                try:
+                    bname, acc_id, docs = future.result()
+                    if bname not in json_data:
+                        json_data[bname] = {}
+                    json_data[bname][acc_id] = docs
+                except Exception as e:
+                    print(f"[ERROR] Failed fetching subcollection: {e}")
 
-    return json_data
+        if json_data:
+            _RECORDS_CACHE = json_data
+            _CACHE_TIMESTAMP = time.time()
+        return json_data or _RECORDS_CACHE or {}
+    except Exception as e:
+        print(f"[ERROR] Firestore error in get_all_records: {e}")
+        return _RECORDS_CACHE or {}
 
 
 def add_to_stash(path,data):
@@ -160,6 +183,7 @@ def add_record(path, data):
         return False
 
     current_db.document(path).set(data)
+    invalidate_records_cache()
     return True
 
 
