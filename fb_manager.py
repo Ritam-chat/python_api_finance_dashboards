@@ -1,4 +1,5 @@
 import os
+import json
 import time
 from csv import excel
 import concurrent.futures
@@ -24,6 +25,21 @@ def get_db():
     global db
     if db is not None:
         return db
+
+    # Check if credentials are provided via environment variable
+    cert_env = os.environ.get("FIREBASE_CERT_JSON") or os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if cert_env:
+        try:
+            cred_dict = json.loads(cert_env)
+            cred = credentials.Certificate(cred_dict)
+            try:
+                firebase_admin.get_app()
+            except ValueError:
+                firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            return db
+        except Exception as e:
+            print(f"[ERROR] Failed to initialize Firebase with FIREBASE_CERT_JSON: {e}")
 
     for p in cert_candidates:
         if p and os.path.exists(p) and os.path.getsize(p) > 0:
