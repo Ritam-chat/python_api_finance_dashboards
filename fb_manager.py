@@ -129,6 +129,15 @@ def get_all_records(user='Ritam', since=None):
         print(f"[ERROR] Firebase database not initialized. Please copy your Firebase service account key to {BASE_DIR}/app_data/Cert.json")
         return _RECORDS_CACHE or {}
 
+    # Quick probe with 2.0s deadline to fail fast if Firestore quota is exceeded
+    try:
+        from google.api_core.retry import Retry
+        current_db.collection(user).document('AXIS').get(retry=Retry(maximum=1.0, deadline=2.0), timeout=2.0)
+    except Exception as e:
+        if 'Quota' in str(e) or 'ResourceExhausted' in str(e) or '429' in str(e):
+            print(f"[WARNING] Firestore read quota exceeded on Firebase project: {e}")
+            return _RECORDS_CACHE or {}
+
     json_data = {}
 
     def fetch_collection(bank_name, coll_ref):
