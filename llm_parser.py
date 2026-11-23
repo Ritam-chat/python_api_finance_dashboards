@@ -135,37 +135,60 @@ def scrub_sms(body: str) -> tuple[str, dict]:
 def parse_with_llm(scrubbed_body: str, address: str, readable_date: str) -> dict | None:
     api_key = os.environ.get("NVIDIA_API_KEY")
     if not api_key:
+        env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+        if os.path.exists(env_file):
+            try:
+                with open(env_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if "=" in line and not line.strip().startswith("#"):
+                            k, v = line.strip().split("=", 1)
+                            if k.strip() == "NVIDIA_API_KEY":
+                                api_key = v.strip().strip("'\"")
+                                os.environ["NVIDIA_API_KEY"] = api_key
+                                break
+            except Exception:
+                pass
+
+    if not api_key:
         logger.error("NVIDIA_API_KEY missing - Fallback active")
-        # Proceed with empty response for API failure mock, but return None to trigger fallback.
         return None
 
-    try:
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=api_key
-        )
-        
-        response = client.chat.completions.create(
-            model="mistralai/mixtral-8x7b-instruct-v0.1",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"SMS sender: {address}\\nSMS body: {scrubbed_body}\\nDate: {readable_date}"}
-            ],
-            temperature=0.0,
-            max_tokens=400
-        )
-        
-        raw = response.choices[0].message.content.strip()
-        
-        if raw.startswith("```json"): raw = raw[7:]
-        if raw.startswith("```"): raw = raw[3:]
-        if raw.endswith("```"): raw = raw[:-3]
-        
-        return json.loads(raw.strip())
-        
-    except Exception as e:
-        logger.error(f"LLM Parse Error: {e}")
-        return None
+    client = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=api_key
+    )
+
+    models_to_try = [
+        os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3.5-bolt-e4b"),
+        "z-ai/glm-5.3-flash"
+    ]
+
+    for model in models_to_try:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": f"SMS sender: {address}\nSMS body: {scrubbed_body}\nDate: {readable_date}"}
+                ],
+                temperature=0.0,
+                max_tokens=400
+            )
+            
+            raw = response.choices[0].message.content.strip()
+            
+            if raw.startswith("```json"): raw = raw[7:]
+            if raw.startswith("```"): raw = raw[3:]
+            if raw.endswith("```"): raw = raw[:-3]
+            
+            parsed = json.loads(raw.strip())
+            return parsed
+            
+        except Exception as e:
+            logger.error(f"LLM Parse Error with model {model}: {e}")
+            continue
+
+    return None
 
 def reconstruct(llm_json: dict, tokens: dict) -> dict:
     if isinstance(llm_json, dict):
