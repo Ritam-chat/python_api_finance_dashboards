@@ -167,8 +167,8 @@ class AddRecord(Resource):
         settings = fb_manager.get_settings(user)
         configured_banks = settings.get('configuredBanks', [])
 
-        # Validate Bank Presence
-        bank_name = detect_bank(address)
+        # Validate Bank Presence (dynamically checking user's configured banks)
+        bank_name = detect_bank(address, configured_banks)
         bank_configured = any(b.get('bankName', '').upper() == bank_name.upper() for b in configured_banks)
         
         if not bank_configured:
@@ -176,8 +176,8 @@ class AddRecord(Resource):
             fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)
             return {"message": "Skipped: needs_review_not_configured"}, 200
 
-        # Stage 1: Pre-validation
-        skip, reason = should_skip(address, body)
+        # Stage 1: Pre-validation (whitelisting user's configured banks)
+        skip, reason = should_skip(address, body, configured_banks)
         if skip:
             stash_data = {"raw": body, "skip_reason": reason}
             fb_manager.add_to_stash(f"{user}/Stash/{address}/{time_id}", stash_data)

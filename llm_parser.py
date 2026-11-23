@@ -39,11 +39,25 @@ Rules:
 - Do not invent values. If something is unclear, use "N/A" or omit.
 """
 
-def should_skip(address: str, body: str) -> tuple[bool, str]:
+def should_skip(address: str, body: str, configured_banks: list = None) -> tuple[bool, str]:
     body_lower = body.lower()
+    addr_upper = address.upper()
     
-    known_banks = ["HDFCBK", "SBIINB", "SBISMS", "ONECRD", "IDFCBK", "AXISBK", "ICICIB", "KOTAKB", "PAYTMB", "YESBNK", "BOIIND", "CANBNK", "UNIONB"]
-    if not any(bank in address.upper() for bank in known_banks):
+    known_banks = [
+        "HDFCBK", "SBIINB", "SBISMS", "ONECRD", "IDFCBK", "AXISBK", "ICICIB", 
+        "KOTAKB", "KOTAK", "HSBCBK", "HSBCIN", "HSBC", "PAYTMB", "YESBNK", 
+        "BOIIND", "CANBNK", "UNIONB", "AMEXIN", "AMEX", "RBLBNK", "RBL", 
+        "SCISMS", "SCB", "FEDBNK", "INDUSB", "KIWIBK"
+    ]
+
+    # Dynamically whitelist any bank configured by the user
+    if configured_banks:
+        for b in configured_banks:
+            bname = (b.get('bankName') or '').strip().upper()
+            if bname and (bname in addr_upper or addr_upper.startswith(bname)):
+                known_banks.append(bname)
+
+    if not any(bank in addr_upper for bank in known_banks):
         return True, f"Address '{address}' not in known bank whitelist"
 
     if len(body) < 30:
@@ -166,8 +180,18 @@ def reconstruct(llm_json: dict, tokens: dict) -> dict:
     else:
         return llm_json
 
-def detect_bank(address: str) -> str:
+def detect_bank(address: str, configured_banks: list = None) -> str:
     addr_upper = address.upper()
+
+    # 1. Dynamically match against user's configured banks first
+    if configured_banks:
+        for b in configured_banks:
+            bname = (b.get('bankName') or '').strip()
+            bname_upper = bname.upper()
+            if bname_upper and (bname_upper in addr_upper or addr_upper.startswith(bname_upper)):
+                return bname
+
+    # 2. Standard bank aliases
     if 'HDFC' in addr_upper: return 'HDFC'
     if 'SBI' in addr_upper: return 'SBI'
     if 'ONECRD' in addr_upper: return 'ONE'
@@ -175,9 +199,15 @@ def detect_bank(address: str) -> str:
     if 'AXIS' in addr_upper: return 'AXIS'
     if 'ICICI' in addr_upper: return 'ICICI'
     if 'KOTAK' in addr_upper: return 'KOTAK'
+    if 'HSBC' in addr_upper: return 'HSBC'
     if 'PAYTM' in addr_upper: return 'PAYTM'
-    if 'YESB' in addr_upper: return 'YESB'
+    if 'YESB' in addr_upper or 'YES BANK' in addr_upper: return 'YES BANK'
+    if 'AMEX' in addr_upper: return 'AMEX'
+    if 'RBL' in addr_upper: return 'RBL'
     if 'BOI' in addr_upper: return 'BOI'
-    if 'CANBNK' in addr_upper: return 'CANARA'
+    if 'CANBNK' in addr_upper or 'CANARA' in addr_upper: return 'CANARA'
     if 'UNION' in addr_upper: return 'UNION'
+    if 'FED' in addr_upper: return 'FEDERAL'
+    if 'INDUS' in addr_upper: return 'INDUSIND'
+    if 'SCB' in addr_upper or 'STAN' in addr_upper: return 'SCB'
     return 'Unknown'
